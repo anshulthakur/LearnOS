@@ -9,3 +9,5 @@ jmp function_end
 
 function_end:
 ```
+Finally, we see how we can print out the addresses of memories for debugging purposes.
+This is a slightly non-trivial problem. The underlying logic to have the ASCII representation is to add the address nibble to Character '0' or 'A' selectively based on some logic.[More info](http://stackoverflow.com/questions/3853730/printing-hexadecimal-digits-with-assembly)

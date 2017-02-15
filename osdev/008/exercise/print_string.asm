@@ -6,7 +6,7 @@ loop:
 	       ; Of course, we could have gone by not doing the mov al, [bx] because we know the lower byte is still there.
   je stop_printing
   mov ah, 0x0e
-  mov al, [bx]  
+  mov al, [bx] ; read [bx] as value at address that is saved in bx
   int 0x10
   add bx, 0x0001
   jmp loop
