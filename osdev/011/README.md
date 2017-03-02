@@ -1,4 +1,4 @@
-In this section, we start to build a basic kernel after having made a switch from 16-bit real mode to 32-bit protected mode.
+In this section, we start to see how the C compiler creates an underlying assembly language code for us.
 
 _Note_ 
 
@@ -114,3 +114,47 @@ Disassembly of binary:
 00000011  C3                ret
 ...
 ```
+
+## Calling functions
+
+The disassembly looks like (note that mine subtracted 0x18 and not 0x8):
+
+```
+00000000  55                push ebp				; Caller Function
+00000001  89E5              mov ebp,esp				; Setup Stack Frame
+00000003  83EC18            sub esp,byte +0x18			; Allocate space to write 0xdede: subtract and save result in esp
+00000006  C70424DEDE0000    mov dword [esp],0xdede		; Write 0xdede into the current address of esp (write high to low)
+0000000D  E802000000        call dword 0x14			; Call callee function
+00000012  C9                leave				; Restore stack
+00000013  C3                ret					; Return from caller
+00000014  55                push ebp				; Callee Function
+00000015  89E5              mov ebp,esp				; Setup stack pointer: Use 32bit word to save esp
+00000017  8B4508            mov eax,[ebp+0x8]			; Skip the 32 bits we just allocated to reach into caller's stack top
+								; 0xdede was kept in the allocated 0x18 memory space.
+0000001A  5D                pop ebp				; We did no stack manipulation, nothing else to restore
+0000001B  C3                ret					; Return from callee
+
+```
+
+For the string function (that introduces pointers):
+
+```
+00000000  55                push ebp				; Save stack base pointer
+00000001  89E5              mov ebp,esp				; Setup stack top to base
+00000003  83EC10            sub esp,byte +0x10			; Allocate address to contain reference to address
+00000006  C745FC0F000000    mov dword [ebp-0x4],0xf		; Write address (offset) to stack where we'd find data
+								; 0xf is 16 bytes ahead of this line, which skips leave and ret
+								; both of which are 8 byte instructions C9 and C3
+0000000D  C9                leave				; Restore stack
+0000000E  C3                ret					; Return from function
+0000000F  48                dec eax				; 48 65 6C 6C 6F 00 is actuall Hello\0. 
+00000010  656C              gs insb
+00000012  6C                insb
+00000013  6F                outsd
+00000014  0000              add [eax],al
+00000016  0000              add [eax],al
+```
+
+This illustrates that what the disassembler sees is not necessarily the assembly code, since it cannot tell whether the value written is a machine code or data. Here, it confused data with machine code and human intelligence must restore meaning to it.
+
+Also, when we pass a reference, it is the address, or address offset from the current line.
